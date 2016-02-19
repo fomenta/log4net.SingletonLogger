@@ -9,7 +9,7 @@ Clear-Host
 Set-Location $PSScriptRoot
 #https://docs.nuget.org/create/creating-and-publishing-a-package
 if (-not $env:NUGET_API_KEY) {
-	throw "Missing Env:NUGET_API_KEY"
+	throw "Missing `$Env:NUGET_API_KEY"
 }
 
 $lastPackage = dir *.nupkg | Select -Last 1
