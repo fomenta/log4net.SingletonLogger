@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 
 namespace ConsoleApp
 {
@@ -77,7 +78,15 @@ namespace ConsoleApp
             ThreadContext.Properties["Method"] = methodName;
 
             var message = getMessage();
+            // fix encoding with special character (á, ñ, etc)
+            message = Encoding.Default.GetString(Encoding.UTF8.GetBytes(message));
+
             //message = string.Format("[{0}.{1}] {2}", method.DeclaringType.Name, method.Name, message);
+            TraceInternal(log, level, message);
+        }
+
+        private static void TraceInternal(ILog log, LevelEnum level, string message)
+        {
             switch (level)
             {
                 case LevelEnum.Fatal: log.Fatal(message); break;
@@ -87,6 +96,34 @@ namespace ConsoleApp
                 case LevelEnum.Debug: log.Debug(message); break;
                 default: throw new NotImplementedException();
             }
+        }
+
+        /// <summary>
+        /// internal function to determine how to display correctly special character on Log2Console
+        /// </summary>
+        /// <param name="log"></param>
+        /// <param name="level"></param>
+        private static void buildSampleMessages(ILog log, LevelEnum level)
+        {
+            var sb = new StringBuilder();
+            const string SPECIAL_CHARS = "áéíóúüñ ÁÉÍÓÚÜÑ";
+            // check how to fix encoding with special character (á, ñ, etc)
+
+            TraceInternal(log, level, SPECIAL_CHARS);
+            TraceInternal(log, level, Encoding.Default.GetString(Encoding.UTF8.GetBytes("WINNER: " + SPECIAL_CHARS)));
+            
+            var encodings = new[] { Encoding.ASCII, Encoding.BigEndianUnicode, Encoding.Default, Encoding.Unicode, Encoding.UTF32, Encoding.UTF7, Encoding.UTF8 };
+
+            foreach (var parent in encodings)
+            {
+                foreach (var child in encodings)
+                {
+                    TraceInternal(log, level,
+                        string.Format("[{1} to {0}] {2}\r\n", parent.ToString(), child.ToString(), parent.GetString(child.GetBytes(SPECIAL_CHARS))));
+                }
+            }
+
+            TraceInternal(log, level, SPECIAL_CHARS);
         }
 
         private static ILog GetLogger(string loggerName)

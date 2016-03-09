@@ -6,16 +6,13 @@ if (-not (Test-Path "C:\ProgramData\chocolatey\bin\nuget.exe")) {
 }
 
 Clear-Host
-Set-Location $PSScriptRoot
+$nugetTargetFolder = "$PSScriptRoot\releases"
+Set-Location $nugetTargetFolder
 #https://docs.nuget.org/create/creating-and-publishing-a-package
-if (-not $env:NUGET_API_KEY) {
-	throw "Missing `$Env:NUGET_API_KEY"
-}
+if (-not $env:NUGET_API_KEY) { throw "Missing `$Env:NUGET_API_KEY" }
 
-$lastPackage = dir *.nupkg | Select -Last 1
-if (-not $lastPackage) {
-	throw "NuGet Package not found"
-}
+$lastPackage = dir "$nugetTargetFolder\*.nupkg" | Select -Last 1
+if (-not $lastPackage) { throw "No NuGet Package found to publish" }
+
 "Publishing $($lastPackage.Name)"
-$lastPackage.FullName 
 nuget push $lastPackage.FullName $env:NUGET_API_KEY
