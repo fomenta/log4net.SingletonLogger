@@ -129,10 +129,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\LogUtility.cs">
+      <Link>LogUtility.cs</Link>
+    </Compile>
     <Compile Include="Business\Client.cs" />
     <Compile Include="External\CommonInterface.cs" />
     <Compile Include="Library\InstanceClass.cs" />
-    <Compile Include="LogUtility.cs" />
     <Compile Include="Library\Utilities\StaticClass.cs" />
     <None Include="App.config">
       <SubType>Designer</SubType>
