@@ -24,7 +24,7 @@ namespace ConsoleApp.Business
 
         public void Dispose()
         {
-            if (LogUtility.IsDebugEnabled) LogUtility.Fatal(() => "Disposing...");
+            if (LogUtility.IsDebugEnabled) LogUtility.Fatal("Disposing...");
         }
     }
 }

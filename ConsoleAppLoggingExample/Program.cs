@@ -40,7 +40,8 @@ namespace ConsoleApp
 		public static void Main(string[] args)
 		{
 			// Log an info level message
-			if (LogUtility.IsInfoEnabled) LogUtility.Info(() => "Application [ConsoleApp] Start");
+            LogUtility.Info(() => "Start");
+            LogUtility.Warn(() => "Testing special characters: áéíóúüñ ÁÉÍÓÚÜÑ");
 
             Init();
 
@@ -67,13 +68,13 @@ namespace ConsoleApp
             // Log a debug message. Test if debug is enabled before
             // attempting to log the message. This is not required but
             // can make running without logging faster.
-            if (LogUtility.IsDebugEnabled) LogUtility.Debug(() => "This is a debug message");
+            LogUtility.Debug(() => "This is a debug message");
         }
 
         private static void Pause()
         {
             // Log an info level message
-            if (LogUtility.IsInfoEnabled) LogUtility.Info(() => "Application [ConsoleApp] End");
+            LogUtility.Info(() => "Application [ConsoleApp] End");
 
             //Console.Write("Press Enter to exit...");
             //Console.ReadLine();
@@ -97,7 +98,7 @@ namespace ConsoleApp
 
         private static void TestLoggingErrors()
         {
-            LogUtility.Error(() => "Hey this is an error!");
+            LogUtility.Error("Hey this is an error!");
         }
 
 		// Helper methods to demonstrate location information and nested exceptions

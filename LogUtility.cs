@@ -1,6 +1,7 @@
 ﻿using log4net;
 using log4net.Config;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -12,8 +13,12 @@ namespace ConsoleApp
     {
         #region Private
         // frames to skip when detecting actual method calling the logger method.
+#if DEBUG
         private const int SKIP_FRAMES = 2;
-        private static Dictionary<string, ILog> loggers = new Dictionary<string, ILog>();
+#else
+        private const int SKIP_FRAMES = 1;
+#endif
+        private static ConcurrentDictionary<string, ILog> loggers = new ConcurrentDictionary<string, ILog>();
         private enum LevelEnum { Fatal, Error, Warn, Info, Debug }
         #endregion
 
@@ -27,6 +32,8 @@ namespace ConsoleApp
         #region Static Constructor
         static LogUtility()
         {
+
+
             string configPath = AppDomain.CurrentDomain.SetupInformation.ConfigurationFile;
             if (File.Exists(configPath)) { XmlConfigurator.ConfigureAndWatch(new FileInfo(configPath)); }
 
@@ -40,9 +47,7 @@ namespace ConsoleApp
         #endregion
 
         #region Wrappers
-
-        public static void Fatal(Func<string> getMessage) { Trace(LevelEnum.Fatal, getMessage); }
-        public static void Error(Func<string> getMessage) { Trace(LevelEnum.Error, getMessage); }
+        // method on which setting might force to skip logging message
         public static void Warn(Func<string> getMessage) { Trace(LevelEnum.Warn, getMessage); }
         public static void Info(Func<string> getMessage) { Trace(LevelEnum.Info, getMessage); }
         public static void Debug(Func<string> getMessage) { Trace(LevelEnum.Debug, getMessage); }
@@ -111,7 +116,7 @@ namespace ConsoleApp
 
             TraceInternal(log, level, SPECIAL_CHARS);
             TraceInternal(log, level, Encoding.Default.GetString(Encoding.UTF8.GetBytes("WINNER: " + SPECIAL_CHARS)));
-            
+
             var encodings = new[] { Encoding.ASCII, Encoding.BigEndianUnicode, Encoding.Default, Encoding.Unicode, Encoding.UTF32, Encoding.UTF7, Encoding.UTF8 };
 
             foreach (var parent in encodings)
@@ -129,10 +134,17 @@ namespace ConsoleApp
         private static ILog GetLogger(string loggerName)
         {
             ILog log;
+
             if (loggers.ContainsKey(loggerName)) { log = loggers[loggerName]; }
-            else { loggers.Add(loggerName, log = LogManager.GetLogger(loggerName)); }
+            else
+            {
+                loggers.GetOrAdd(loggerName, log = LogManager.GetLogger(loggerName));
+            }
 
             return log;
+
+
+
         }
         #endregion
 
@@ -145,10 +157,9 @@ namespace ConsoleApp
         public static Exception PublishException(Exception ex, string extraMessage = null)
         {
             ex = ex.GetBaseException();
-            Error(() => (extraMessage ?? "") + ex.ToString() + (ex.InnerException == null ? "" : ex.InnerException.ToString()));
+            Trace(LevelEnum.Error, () => (extraMessage ?? "") + ex.ToString() + (ex.InnerException == null ? "" : ex.InnerException.ToString()));
             return ex;
         }
         #endregion
-
     }
 }

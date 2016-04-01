@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>Log4Net.SingletonLogger</id>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
     <authors>pablofomenta</authors>
     <owners>pablofomenta</owners>
     <licenseUrl>http://GitHub/Fomenta/log4net.SingletonLogger</licenseUrl>
