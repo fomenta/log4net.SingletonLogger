@@ -2,7 +2,6 @@
 using log4net.Config;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -27,6 +26,13 @@ namespace ConsoleApp
         public static bool IsDebugEnabled { get; private set; }
         public static bool IsInfoEnabled { get; private set; }
         public static bool IsWarnEnabled { get; private set; }
+        #endregion
+
+        #region Extra
+        public static string GetFullMessage(Exception ex)
+        {
+            return ex.ToString() + (ex.InnerException == null ? "" : Environment.NewLine + ex.InnerException.ToString());
+        }
         #endregion
 
         #region Static Constructor

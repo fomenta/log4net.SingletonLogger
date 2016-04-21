@@ -9,7 +9,7 @@ Clear-Host
 $nugetTargetFolder = "$PSScriptRoot\releases"
 Set-Location $nugetTargetFolder
 #https://docs.nuget.org/create/creating-and-publishing-a-package
-if (-not $env:NUGET_API_KEY) { throw "Missing `$Env:NUGET_API_KEY" }
+if (-not $env:NUGET_API_KEY) { throw "Missing `$Env:NUGET_API_KEY. Get one at https://www.nuget.org/account - To create, run: [Environment]::SetEnvironmentVariable('NUGET_API_KEY', 'a0830ebb-d6ac-4556-953e-3075366bcf31', 'User')" }
 
 $lastPackage = dir "$nugetTargetFolder\*.nupkg" | Select -Last 1
 if (-not $lastPackage) { throw "No NuGet Package found to publish" }
