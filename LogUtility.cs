@@ -2,9 +2,11 @@
 using log4net.Config;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Threading;
 
 namespace ConsoleApp
 {
@@ -28,18 +30,9 @@ namespace ConsoleApp
         public static bool IsWarnEnabled { get; private set; }
         #endregion
 
-        #region Extra
-        public static string GetFullMessage(Exception ex)
-        {
-            return ex.ToString() + (ex.InnerException == null ? "" : Environment.NewLine + ex.InnerException.ToString());
-        }
-        #endregion
-
         #region Static Constructor
         static LogUtility()
         {
-
-
             string configPath = AppDomain.CurrentDomain.SetupInformation.ConfigurationFile;
             if (File.Exists(configPath)) { XmlConfigurator.ConfigureAndWatch(new FileInfo(configPath)); }
 
@@ -67,33 +60,65 @@ namespace ConsoleApp
 
         private static void Trace(LevelEnum level, Func<string> getMessage)
         {
-            var stacktrace = new StackTrace(SKIP_FRAMES, true);
-            var method = stacktrace.GetFrame(0).GetMethod();
-
-            var assemblyName = method.DeclaringType.Assembly.GetName().Name;
-            var className = method.DeclaringType.Name;
-            var methodName = method.Name;
-
-            var loggerName = string.Format("{0}.{1}.{2}.{3}", assemblyName, CurrentProcessID, className, methodName);
-            var log = GetLogger(loggerName);
-
-            switch (level)
+            try
             {
-                case LevelEnum.Warn: if (!log.IsWarnEnabled) { return; } break;
-                case LevelEnum.Info: if (!log.IsInfoEnabled) { return; } break;
-                case LevelEnum.Debug: if (!log.IsDebugEnabled) { return; } break;
+                var stackTrace = new StackTrace(SKIP_FRAMES, true);
+                var method = stackTrace.GetFrame(0).GetMethod();
+
+                var className = method.DeclaringType.Name;
+                int extraFrames = 0;
+                string extraText = "";
+                while (className == "Logger")
+                {
+#if DEBUG
+                    if (!Debugger.IsAttached) { Debugger.Launch(); }
+#endif
+                    extraFrames++;
+                    try
+                    {
+                        stackTrace = new StackTrace(SKIP_FRAMES + extraFrames, true);
+                        method = stackTrace.GetFrame(0).GetMethod();
+                        className = method.DeclaringType.Name;
+                    }
+                    catch (Exception ex)
+                    {
+                        extraText = "ERROR: " + ex.Message;
+                        break;
+                    }
+                }
+                extraText += extraFrames == 0 ? "" : string.Format("[Extra Frames: {0}] ", extraFrames);
+
+                var assemblyName = method.DeclaringType.Assembly.GetName().Name;
+                var methodName = method.Name;
+
+                var loggerName = string.Format("{0}.{1}.{2}.{3}", assemblyName, CurrentProcessID, className, methodName);
+                var log = GetLogger(loggerName);
+
+                switch (level)
+                {
+                    case LevelEnum.Warn: if (!log.IsWarnEnabled) { return; } break;
+                    case LevelEnum.Info: if (!log.IsInfoEnabled) { return; } break;
+                    case LevelEnum.Debug: if (!log.IsDebugEnabled) { return; } break;
+                }
+
+                ThreadContext.Properties["PID"] = CurrentProcessID.ToString();
+                ThreadContext.Properties["ThreadID"] = Thread.CurrentThread.ManagedThreadId.ToString();
+                ThreadContext.Properties["Class"] = className;
+                ThreadContext.Properties["Method"] = methodName;
+
+                var message = extraText + getMessage();
+                // fix encoding with special character (á, ñ, etc)
+                message = Encoding.Default.GetString(Encoding.UTF8.GetBytes(message));
+
+                //message = string.Format("[{0}.{1}] {2}", method.DeclaringType.Name, method.Name, message);
+                TraceInternal(log, level, message);
             }
-
-            ThreadContext.Properties["PID"] = CurrentProcessID.ToString();
-            ThreadContext.Properties["Class"] = className;
-            ThreadContext.Properties["Method"] = methodName;
-
-            var message = getMessage();
-            // fix encoding with special character (á, ñ, etc)
-            message = Encoding.Default.GetString(Encoding.UTF8.GetBytes(message));
-
-            //message = string.Format("[{0}.{1}] {2}", method.DeclaringType.Name, method.Name, message);
-            TraceInternal(log, level, message);
+            catch (Exception ex)
+            {
+                var loggerName = string.Format("{0}.{1}.{2}.{3}", "Logging", CurrentProcessID, "Logger", "Trace");
+                var log = LogManager.GetLogger(loggerName);
+                TraceInternal(log, LevelEnum.Error, ex.ToString());
+            }
         }
 
         private static void TraceInternal(ILog log, LevelEnum level, string message)
@@ -167,5 +192,7 @@ namespace ConsoleApp
             return ex;
         }
         #endregion
+
+
     }
 }
