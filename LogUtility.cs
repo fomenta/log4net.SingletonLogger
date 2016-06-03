@@ -13,12 +13,14 @@ namespace ConsoleApp
     public static class LogUtility
     {
         #region Private
+        // WARNING: Not needed. Seemed a bug on target computer being tested 
         // frames to skip when detecting actual method calling the logger method.
-#if DEBUG
+        //#if DEBUG
+        //#else
+        //        private const int SKIP_FRAMES = 1;
+        //#endif
         private const int SKIP_FRAMES = 2;
-#else
-        private const int SKIP_FRAMES = 1;
-#endif
+
         private static ConcurrentDictionary<string, ILog> loggers = new ConcurrentDictionary<string, ILog>();
         private enum LevelEnum { Fatal, Error, Warn, Info, Debug }
         #endregion
