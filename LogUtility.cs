@@ -40,8 +40,15 @@ namespace ConsoleApp
         #region Static Constructor
         static LogUtility()
         {
-            string configPath = AppDomain.CurrentDomain.SetupInformation.ConfigurationFile;
-            if (File.Exists(configPath)) { XmlConfigurator.ConfigureAndWatch(new FileInfo(configPath)); }
+            /* read config in the following order:
+             * log4net.config (if exists)
+             * app.config     (if exists)
+            */
+            var configInfo = new FileInfo(AppDomain.CurrentDomain.SetupInformation.ConfigurationFile);
+            var log4netConfigInfo = new FileInfo(Path.Combine(configInfo.DirectoryName, "log4net.config"));
+
+            if (log4netConfigInfo.Exists) { XmlConfigurator.ConfigureAndWatch(log4netConfigInfo); }
+            else if (configInfo.Exists) { XmlConfigurator.ConfigureAndWatch(configInfo); }
 
             CurrentProcessID = Process.GetCurrentProcess().Id;
 
@@ -200,7 +207,7 @@ namespace ConsoleApp
         public static Exception PublishException(Exception ex, string extraMessage = null)
         {
             ex = ex.GetBaseException();
-            Trace(LevelEnum.Error, () => (extraMessage ?? "") + ex.ToString() + (ex.InnerException == null ? "" : ex.InnerException.ToString()));
+            Trace(LevelEnum.Error, () => (extraMessage ?? "") + GetFullMessage(ex));
             return ex;
         }
         #endregion
