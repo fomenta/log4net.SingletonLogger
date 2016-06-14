@@ -2,7 +2,6 @@
 using log4net.Config;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -67,17 +66,17 @@ namespace ConsoleApp
         public static void Info(Func<string> getMessage) { Trace(LevelEnum.Info, getMessage); }
         public static void Debug(Func<string> getMessage) { Trace(LevelEnum.Debug, getMessage); }
 
-        public static void Fatal(string message, params object[] args) { Trace(LevelEnum.Fatal, () => string.Format(message, args)); }
-        public static void Error(string message, params object[] args) { Trace(LevelEnum.Error, () => string.Format(message, args)); }
-        public static void Warn(string message, params object[] args) { Trace(LevelEnum.Warn, () => string.Format(message, args)); }
-        public static void Info(string message, params object[] args) { Trace(LevelEnum.Info, () => string.Format(message, args)); }
-        public static void Debug(string message, params object[] args) { Trace(LevelEnum.Debug, () => string.Format(message, args)); }
+        public static void Fatal(string message, params object[] args) { Trace(LevelEnum.Fatal, () => string_Format(message, args)); }
+        public static void Error(string message, params object[] args) { Trace(LevelEnum.Error, () => string_Format(message, args)); }
+        public static void Warn(string message, params object[] args) { Trace(LevelEnum.Warn, () => string_Format(message, args)); }
+        public static void Info(string message, params object[] args) { Trace(LevelEnum.Info, () => string_Format(message, args)); }
+        public static void Debug(string message, params object[] args) { Trace(LevelEnum.Debug, () => string_Format(message, args)); }
 
-        public static void Fatal(int stackFrameOffset, string message, params object[] args) { Trace(LevelEnum.Fatal, () => string.Format(message, args), stackFrameOffset); }
-        public static void Error(int stackFrameOffset, string message, params object[] args) { Trace(LevelEnum.Error, () => string.Format(message, args), stackFrameOffset); }
-        public static void Warn(int stackFrameOffset, string message, params object[] args) { Trace(LevelEnum.Warn, () => string.Format(message, args), stackFrameOffset); }
-        public static void Info(int stackFrameOffset, string message, params object[] args) { Trace(LevelEnum.Info, () => string.Format(message, args), stackFrameOffset); }
-        public static void Debug(int stackFrameOffset, string message, params object[] args) { Trace(LevelEnum.Debug, () => string.Format(message, args), stackFrameOffset); }
+        public static void Fatal(int stackFrameOffset, string message, params object[] args) { Trace(LevelEnum.Fatal, () => string_Format(message, args), stackFrameOffset); }
+        public static void Error(int stackFrameOffset, string message, params object[] args) { Trace(LevelEnum.Error, () => string_Format(message, args), stackFrameOffset); }
+        public static void Warn(int stackFrameOffset, string message, params object[] args) { Trace(LevelEnum.Warn, () => string_Format(message, args), stackFrameOffset); }
+        public static void Info(int stackFrameOffset, string message, params object[] args) { Trace(LevelEnum.Info, () => string_Format(message, args), stackFrameOffset); }
+        public static void Debug(int stackFrameOffset, string message, params object[] args) { Trace(LevelEnum.Debug, () => string_Format(message, args), stackFrameOffset); }
 
         private static void Trace(LevelEnum level, Func<string> getMessage, int stackFrameOffset = 0)
         {
@@ -155,6 +154,16 @@ namespace ConsoleApp
             }
         }
 
+        private static string string_Format(string message, object[] args)
+        {
+            if (string.IsNullOrEmpty(message)) { return message; }
+            if (args == null || args.Length == 0)
+            {
+                message = message.Replace("{", "{{").Replace("}", "}}");
+            }
+            return string.Format(message, args);
+        }
+
         /// <summary>
         /// internal function to determine how to display correctly special character on Log2Console
         /// </summary>
@@ -213,7 +222,5 @@ namespace ConsoleApp
             return ex;
         }
         #endregion
-
-
     }
 }
