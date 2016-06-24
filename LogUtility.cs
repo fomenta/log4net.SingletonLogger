@@ -21,7 +21,7 @@ namespace ConsoleApp
         private const int SKIP_FRAMES = 2;
 
         private static ConcurrentDictionary<string, ILog> loggers = new ConcurrentDictionary<string, ILog>();
-        private enum LevelEnum { Fatal, Error, Warn, Info, Debug }
+        private enum LevelEnum { Fatal, Error, Warn, Info, Debug, Trace }
         #endregion
 
         #region Public Properties
@@ -32,9 +32,17 @@ namespace ConsoleApp
         #endregion
 
         #region Extra
-        public static string GetFullMessage(Exception ex)
+        public static string GetFullMessage(Exception ex, string extraMessage = null, int maxLength = 0)
         {
-            return ex.ToString() + (ex.InnerException == null ? "" : Environment.NewLine + ex.InnerException.ToString());
+            var errorMessage = (ex.InnerException == null ? "" : ex.InnerException.ToString() + Environment.NewLine)
+                                + ex.ToString();
+
+            if (!string.IsNullOrEmpty(extraMessage)) { errorMessage = extraMessage + " " + errorMessage; }
+
+            if (maxLength > 0)
+            { errorMessage = errorMessage.Substring(0, Math.Min(errorMessage.Length, maxLength)); }
+
+            return errorMessage;
         }
         #endregion
 
@@ -62,23 +70,26 @@ namespace ConsoleApp
 
         #region Wrappers
         // method on which setting might force to skip logging message
-        public static void Warn(Func<string> getMessage) { Trace(LevelEnum.Warn, getMessage); }
-        public static void Info(Func<string> getMessage) { Trace(LevelEnum.Info, getMessage); }
-        public static void Debug(Func<string> getMessage) { Trace(LevelEnum.Debug, getMessage); }
+        public static void Warn(Func<string> getMessage) { Log(LevelEnum.Warn, getMessage); }
+        public static void Info(Func<string> getMessage) { Log(LevelEnum.Info, getMessage); }
+        public static void Debug(Func<string> getMessage) { Log(LevelEnum.Debug, getMessage); }
+        public static void Trace(Func<string> getMessage) { Log(LevelEnum.Trace, getMessage); }
 
-        public static void Fatal(string message, params object[] args) { Trace(LevelEnum.Fatal, () => string_Format(message, args)); }
-        public static void Error(string message, params object[] args) { Trace(LevelEnum.Error, () => string_Format(message, args)); }
-        public static void Warn(string message, params object[] args) { Trace(LevelEnum.Warn, () => string_Format(message, args)); }
-        public static void Info(string message, params object[] args) { Trace(LevelEnum.Info, () => string_Format(message, args)); }
-        public static void Debug(string message, params object[] args) { Trace(LevelEnum.Debug, () => string_Format(message, args)); }
+        public static void Fatal(string message, params object[] args) { Log(LevelEnum.Fatal, () => string_Format(message, args)); }
+        public static void Error(string message, params object[] args) { Log(LevelEnum.Error, () => string_Format(message, args)); }
+        public static void Warn(string message, params object[] args) { Log(LevelEnum.Warn, () => string_Format(message, args)); }
+        public static void Info(string message, params object[] args) { Log(LevelEnum.Info, () => string_Format(message, args)); }
+        public static void Debug(string message, params object[] args) { Log(LevelEnum.Debug, () => string_Format(message, args)); }
+        public static void Trace(string message, params object[] args) { Log(LevelEnum.Trace, () => string_Format(message, args)); }
 
-        public static void Fatal(int stackFrameOffset, string message, params object[] args) { Trace(LevelEnum.Fatal, () => string_Format(message, args), stackFrameOffset); }
-        public static void Error(int stackFrameOffset, string message, params object[] args) { Trace(LevelEnum.Error, () => string_Format(message, args), stackFrameOffset); }
-        public static void Warn(int stackFrameOffset, string message, params object[] args) { Trace(LevelEnum.Warn, () => string_Format(message, args), stackFrameOffset); }
-        public static void Info(int stackFrameOffset, string message, params object[] args) { Trace(LevelEnum.Info, () => string_Format(message, args), stackFrameOffset); }
-        public static void Debug(int stackFrameOffset, string message, params object[] args) { Trace(LevelEnum.Debug, () => string_Format(message, args), stackFrameOffset); }
+        public static void Fatal(int stackFrameOffset, string message, params object[] args) { Log(LevelEnum.Fatal, () => string_Format(message, args), stackFrameOffset); }
+        public static void Error(int stackFrameOffset, string message, params object[] args) { Log(LevelEnum.Error, () => string_Format(message, args), stackFrameOffset); }
+        public static void Warn(int stackFrameOffset, string message, params object[] args) { Log(LevelEnum.Warn, () => string_Format(message, args), stackFrameOffset); }
+        public static void Info(int stackFrameOffset, string message, params object[] args) { Log(LevelEnum.Info, () => string_Format(message, args), stackFrameOffset); }
+        public static void Debug(int stackFrameOffset, string message, params object[] args) { Log(LevelEnum.Debug, () => string_Format(message, args), stackFrameOffset); }
+        public static void Trace(int stackFrameOffset, string message, params object[] args) { Log(LevelEnum.Trace, () => string_Format(message, args), stackFrameOffset); }
 
-        private static void Trace(LevelEnum level, Func<string> getMessage, int stackFrameOffset = 0)
+        private static void Log(LevelEnum level, Func<string> getMessage, int stackFrameOffset = 0)
         {
             try
             {
@@ -131,17 +142,17 @@ namespace ConsoleApp
                 message = Encoding.Default.GetString(Encoding.UTF8.GetBytes(message));
 
                 //message = string.Format("[{0}.{1}] {2}", method.DeclaringType.Name, method.Name, message);
-                TraceInternal(log, level, message);
+                LogInternal(log, level, message);
             }
             catch (Exception ex)
             {
                 var loggerName = string.Format("{0}.{1}.{2}.{3}", "Logging", CurrentProcessID, "Logger", "Trace");
                 var log = LogManager.GetLogger(loggerName);
-                TraceInternal(log, LevelEnum.Error, ex.ToString());
+                LogInternal(log, LevelEnum.Error, ex.ToString());
             }
         }
 
-        private static void TraceInternal(ILog log, LevelEnum level, string message)
+        private static void LogInternal(ILog log, LevelEnum level, string message)
         {
             switch (level)
             {
@@ -150,6 +161,7 @@ namespace ConsoleApp
                 case LevelEnum.Warn: log.Warn(message); break;
                 case LevelEnum.Info: log.Info(message); break;
                 case LevelEnum.Debug: log.Debug(message); break;
+                case LevelEnum.Trace: log.Logger.Log(null, log4net.Core.Level.Trace, message, exception: null); break;
                 default: throw new NotImplementedException();
             }
         }
@@ -175,8 +187,8 @@ namespace ConsoleApp
             const string SPECIAL_CHARS = "áéíóúüñ ÁÉÍÓÚÜÑ";
             // check how to fix encoding with special character (á, ñ, etc)
 
-            TraceInternal(log, level, SPECIAL_CHARS);
-            TraceInternal(log, level, Encoding.Default.GetString(Encoding.UTF8.GetBytes("WINNER: " + SPECIAL_CHARS)));
+            LogInternal(log, level, SPECIAL_CHARS);
+            LogInternal(log, level, Encoding.Default.GetString(Encoding.UTF8.GetBytes("WINNER: " + SPECIAL_CHARS)));
 
             var encodings = new[] { Encoding.ASCII, Encoding.BigEndianUnicode, Encoding.Default, Encoding.Unicode, Encoding.UTF32, Encoding.UTF7, Encoding.UTF8 };
 
@@ -184,12 +196,12 @@ namespace ConsoleApp
             {
                 foreach (var child in encodings)
                 {
-                    TraceInternal(log, level,
+                    LogInternal(log, level,
                         string.Format("[{1} to {0}] {2}\r\n", parent.ToString(), child.ToString(), parent.GetString(child.GetBytes(SPECIAL_CHARS))));
                 }
             }
 
-            TraceInternal(log, level, SPECIAL_CHARS);
+            LogInternal(log, level, SPECIAL_CHARS);
         }
 
         private static ILog GetLogger(string loggerName)
@@ -218,7 +230,7 @@ namespace ConsoleApp
         public static Exception PublishException(Exception ex, string extraMessage = null)
         {
             ex = ex.GetBaseException();
-            Trace(LevelEnum.Error, () => (extraMessage ?? "") + GetFullMessage(ex));
+            Log(LevelEnum.Error, () => (extraMessage ?? "") + GetFullMessage(ex));
             return ex;
         }
         #endregion
