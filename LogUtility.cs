@@ -2,6 +2,7 @@
 using log4net.Config;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -122,7 +123,7 @@ namespace ConsoleApp
                 var assemblyName = method.DeclaringType.Assembly.GetName().Name;
                 var methodName = method.Name;
 
-                var loggerName = string.Format("{0}.{1}.{2}.{3}", assemblyName, CurrentProcessID, className, methodName);
+                var loggerName = string.Format("{0}.{1}.{2}.{3}.{4}", Environment.MachineName, assemblyName, CurrentProcessID, className, methodName);
                 var log = GetLogger(loggerName);
 
                 switch (level)
@@ -132,14 +133,20 @@ namespace ConsoleApp
                     case LevelEnum.Debug: if (!log.IsDebugEnabled) { return; } break;
                 }
 
+                ThreadContext.Properties["MachineName"] = Environment.MachineName;
                 ThreadContext.Properties["PID"] = CurrentProcessID.ToString();
                 ThreadContext.Properties["ThreadID"] = Thread.CurrentThread.ManagedThreadId.ToString();
                 ThreadContext.Properties["Class"] = className;
                 ThreadContext.Properties["Method"] = methodName;
 
                 var message = extraText + getMessage();
+                
                 // fix encoding with special character (á, ñ, etc)
                 message = Encoding.Default.GetString(Encoding.UTF8.GetBytes(message));
+                //message = Encoding.GetEncoding("Windows-1252").GetString(Encoding.UTF8.GetBytes(message));
+
+                // add extra text
+                message = extraText + message;
 
                 //message = string.Format("[{0}.{1}] {2}", method.DeclaringType.Name, method.Name, message);
                 LogInternal(log, level, message);
@@ -184,22 +191,32 @@ namespace ConsoleApp
         private static void buildSampleMessages(ILog log, LevelEnum level)
         {
             var sb = new StringBuilder();
-            const string SPECIAL_CHARS = "áéíóúüñ ÁÉÍÓÚÜÑ";
+            const string SPECIAL_CHARS = "áéíóúÁÉÍÓÚ àèìòùÀÈÌÒÙ äëïöüÄËÏÖÜ ñÑ";
             // check how to fix encoding with special character (á, ñ, etc)
+            var text = SPECIAL_CHARS;
 
             LogInternal(log, level, SPECIAL_CHARS);
             LogInternal(log, level, Encoding.Default.GetString(Encoding.UTF8.GetBytes("WINNER: " + SPECIAL_CHARS)));
 
-            var encodings = new[] { Encoding.ASCII, Encoding.BigEndianUnicode, Encoding.Default, Encoding.Unicode, Encoding.UTF32, Encoding.UTF7, Encoding.UTF8 };
+            var encodings = new List<EncodingInfo>();
+            foreach (var item in Encoding.GetEncodings()) { encodings.Add(item); }
 
-            foreach (var parent in encodings)
+            var list = new List<string>();
+
+            foreach (var targetItem in encodings)
             {
-                foreach (var child in encodings)
+                var target = targetItem.GetEncoding();
+                foreach (var sourceItem in encodings)
                 {
-                    LogInternal(log, level,
-                        string.Format("[{1} to {0}] {2}\r\n", parent.ToString(), child.ToString(), parent.GetString(child.GetBytes(SPECIAL_CHARS))));
+                    var source = sourceItem.GetEncoding();
+                    var newText = target.GetString(source.GetBytes(text));
+                    newText = string.Format("[{0}:{1} to {2}:{3}] {4}", sourceItem.CodePage, sourceItem.Name, targetItem.CodePage, targetItem.Name, newText);
+                    LogInternal(log, level, newText);
+                    list.Add(newText);
                 }
             }
+
+            var f = list.Count;
 
             LogInternal(log, level, SPECIAL_CHARS);
         }
