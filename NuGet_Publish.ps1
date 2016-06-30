@@ -15,4 +15,7 @@ $lastPackage = dir "$nugetTargetFolder\*.nupkg" | Select -Last 1
 if (-not $lastPackage) { throw "No NuGet Package found to publish" }
 
 "Publishing $($lastPackage.Name)"
-nuget push $lastPackage.FullName $env:NUGET_API_KEY
+#$ArgList = "push", $lastPackage.FullName, $env:NUGET_API_KEY, "-Source", "https://www.nuget.org/api/v2/package"
+$ArgList = "push", $lastPackage.FullName, $env:NUGET_API_KEY, "-Source", "nuget.org"
+"nuget $ArgList"
+nuget $ArgList
